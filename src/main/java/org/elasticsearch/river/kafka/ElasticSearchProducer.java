@@ -77,7 +77,7 @@ public abstract class ElasticSearchProducer {
                     }
                 })
                 .setBulkActions(riverConfig.getBulkSize())
-                .setFlushInterval(TimeValue.timeValueHours(12))
+                .setFlushInterval(TimeValue.timeValueSeconds(riverConfig.getFlushIntervalSecs()))
                 .setConcurrentRequests(riverConfig.getConcurrentRequests())
                 .build();
     }

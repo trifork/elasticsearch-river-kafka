@@ -66,6 +66,7 @@ curl -XPUT 'localhost:9200/_river/<river-name>/_meta' -d '
         "type" : <mapping.type.name>,
         "bulk.size" : <bulk.size>,
         "concurrent.requests" : <concurrent.requests>,
+        "flush.interval.secs" : <flush.interval.secs>,
         "action.type" : <action.type>
      }
  }'
@@ -89,6 +90,7 @@ curl -XPUT 'localhost:9200/_river/<river-name>/_meta' -d '
          "type" : "status",
          "bulk.size" : 100,
          "concurrent.requests" : 1,
+         "flush.interval.secs" : 5,
          "action.type" : "index"
       }
   }'
@@ -122,12 +124,12 @@ The detailed description of each parameter:
 * `type` (optional) - The mapping type of elasticsearch index. Default is: `status`
 * `bulk.size` (optional) - The number of messages to be bulk indexed into elasticsearch. Default is: `100`
 * `concurrent.requests` (optional) - The number of concurrent requests of indexing that will be allowed. A value of 0 means that only a single request will be allowed to be executed. A value of 1 means 1 concurrent request is allowed to be executed while accumulating new bulk requests. Default is: `1`
+* `flush.interval.secs` (optional) - The number seconds between flushes to elastic search. Default is: `5` so any remaining messages get flushed to elasticsearch after 5s even if the number of messages has not reached.
 * `action.type` (optional) - The action type against how the messages should be processed. Default is: `index`. The following options are available:
    - `index` : Creates documents in ES with the `value` field set to the received message.
    - `delete` : Deletes documents from ES based on `id` field set in the received message.
    - `raw.execute` : Execute incoming messages as a raw query.
 
-Flush interval is set to 12 hours by default, so any remaining messages get flushed to elasticsearch even if the number of messages has not reached. 
 
 
 To delete the existing river, execute:
@@ -172,5 +174,4 @@ Contributing
 4. Write tests for your change (if applicable)
 5. Ensure all the tests are passing
 6. Submit a Pull Request using Github
-
 

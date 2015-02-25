@@ -40,6 +40,7 @@ public class RiverConfig {
     private static final String BULK_SIZE = "bulk.size";
     private static final String CONCURRENT_REQUESTS = "concurrent.requests";
     private static final String ACTION_TYPE = "action.type";
+    private static final String FLUSH_INTERVAL_SECS = "flush.interval.secs";
 
 
     private String zookeeperConnect;
@@ -51,6 +52,7 @@ public class RiverConfig {
     private int bulkSize;
     private int concurrentRequests;
     private ActionType actionType;
+    private long flushIntervalSecs;
 
 
     public RiverConfig(RiverName riverName, RiverSettings riverSettings) {
@@ -78,6 +80,7 @@ public class RiverConfig {
             typeName = XContentMapValues.nodeStringValue(indexSettings.get(MAPPING_TYPE), "status");
             bulkSize = XContentMapValues.nodeIntegerValue(indexSettings.get(BULK_SIZE), 100);
             concurrentRequests = XContentMapValues.nodeIntegerValue(indexSettings.get(CONCURRENT_REQUESTS), 1);
+            flushIntervalSecs = XContentMapValues.nodeIntegerValue(indexSettings.get(FLUSH_INTERVAL_SECS), 5);
             actionType = ActionType.fromValue(XContentMapValues.nodeStringValue(indexSettings.get(ACTION_TYPE),
                     ActionType.INDEX.toValue()));
         } else {
@@ -85,8 +88,13 @@ public class RiverConfig {
             typeName = "status";
             bulkSize = 100;
             concurrentRequests = 1;
+            flushIntervalSecs = 5;
             actionType = ActionType.INDEX;
         }
+    }
+
+    public long getFlushIntervalSecs() {
+        return flushIntervalSecs;
     }
 
     public enum ActionType {
