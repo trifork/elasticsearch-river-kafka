@@ -20,12 +20,11 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.river.kafka.consume.KafkaConsumer;
 import org.elasticsearch.river.kafka.config.ESConfig;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Producer to index documents. Creates index document requests, which are executed with Bulk API.
@@ -66,15 +65,14 @@ public class IndexDocumentProducer extends ElasticSearchProducer {
                                 .string();
                         request = Requests.indexRequest(config.generateIndexName()).
                                 type(config.getTypeName()).
-                                id(UUID.randomUUID().toString()).
                                 source(message);
                         break;
                     case JSON:
                         final Map<String, Object> messageMap = reader.readValue(messageBytes);
-                        request = Requests.indexRequest(config.generateIndexName()).
-                                type(config.getTypeName()).
-                                id(UUID.randomUUID().toString()).
-                                source(messageMap);
+                        request = Requests.
+                                        indexRequest(config.generateIndexName())
+                                        .type(config.getTypeName())
+                                        .source(messageMap);
                 }
 
                 bulkProcessor.add(request);
