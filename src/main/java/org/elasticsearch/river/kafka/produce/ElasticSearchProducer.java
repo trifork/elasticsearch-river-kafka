@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright 2014 Mariam Hakobyan
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.elasticsearch.river.kafka;
+package org.elasticsearch.river.kafka.produce;
 
 import kafka.message.MessageAndMetadata;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -26,6 +26,9 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.river.kafka.consume.Consumer;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
+import org.elasticsearch.river.kafka.config.ESConfig;
 
 import java.util.Map;
 import java.util.Set;
@@ -45,40 +48,39 @@ public abstract class ElasticSearchProducer {
     private Client client;
     protected BulkProcessor bulkProcessor;
 
-    protected RiverConfig riverConfig;
+    protected ESConfig config;
 
-    public ElasticSearchProducer(final Client client, final RiverConfig riverConfig, final KafkaConsumer kafkaConsumer) {
+    public ElasticSearchProducer(final Client client, final ESConfig config, final Consumer consumer) {
         this.client = client;
-        this.riverConfig = riverConfig;
-
-        createBulkProcessor(kafkaConsumer);
+        this.config = config;
+        createBulkProcessor(consumer);
     }
 
-    private void createBulkProcessor(final KafkaConsumer kafkaConsumer) {
+    private void createBulkProcessor(final Consumer consumer) {
         bulkProcessor = BulkProcessor.builder(client,
                 new BulkProcessor.Listener() {
                     @Override
                     public void beforeBulk(long executionId, BulkRequest request) {
-                        logger.info("Index: {}: Going to execute bulk request composed of {} actions.", riverConfig.getIndexName(), request.numberOfActions());
+                        logger.info("Index: {}: Going to execute bulk request composed of {} actions.", config.getIndexName(), request.numberOfActions());
                     }
 
                     @Override
                     public void afterBulk(long executionId, BulkRequest request, BulkResponse response) {
-                        logger.info("Index: {}: Executed bulk composed of {} actions.", riverConfig.getIndexName(), request.numberOfActions());
+                        logger.info("Index: {}: Executed bulk composed of {} actions.", config.getIndexName(), request.numberOfActions());
 
                         // Commit the kafka messages offset, only when messages have been successfully
                         // inserted into ElasticSearch
-                        kafkaConsumer.getConsumerConnector().commitOffsets();
+                        consumer.commitReads();
                     }
 
                     @Override
                     public void afterBulk(long executionId, BulkRequest request, Throwable failure) {
-                        logger.warn("Index: {}: Error executing bulk.", failure, riverConfig.getIndexName());
+                        logger.warn("Index: {}: Error executing bulk.", failure, config.getIndexName());
                     }
                 })
-                .setBulkActions(riverConfig.getBulkSize())
-                .setFlushInterval(TimeValue.timeValueSeconds(riverConfig.getFlushIntervalSecs()))
-                .setConcurrentRequests(riverConfig.getConcurrentRequests())
+                .setBulkActions(config.getBulkSize())
+                .setFlushInterval(TimeValue.timeValueSeconds(config.getFlushIntervalSecs()))
+                .setConcurrentRequests(config.getConcurrentRequests())
                 .build();
     }
 

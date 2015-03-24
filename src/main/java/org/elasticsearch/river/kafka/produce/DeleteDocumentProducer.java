@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.elasticsearch.river.kafka;
+package org.elasticsearch.river.kafka.produce;
 
 import kafka.message.MessageAndMetadata;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
+import org.elasticsearch.river.kafka.config.ESConfig;
 
 import java.util.Map;
 import java.util.Set;
@@ -30,8 +32,8 @@ import java.util.Set;
  */
 public class DeleteDocumentProducer extends ElasticSearchProducer {
 
-    public DeleteDocumentProducer(Client client, RiverConfig riverConfig, KafkaConsumer kafkaConsumer) {
-        super(client, riverConfig, kafkaConsumer);
+    public DeleteDocumentProducer(Client client, ESConfig config, KafkaConsumer kafkaConsumer) {
+        super(client, config, kafkaConsumer);
     }
 
     /**
@@ -53,8 +55,8 @@ public class DeleteDocumentProducer extends ElasticSearchProducer {
                 if(messageMap.containsKey("id")) {
                     String id = (String)messageMap.get("id");
 
-                    final DeleteRequest request = Requests.deleteRequest(riverConfig.getIndexName()).
-                            type(riverConfig.getTypeName()).
+                    final DeleteRequest request = Requests.deleteRequest(config.generateIndexName()).
+                            type(config.getTypeName()).
                             id(id);
 
                     bulkProcessor.add(request);

@@ -22,6 +22,9 @@ import kafka.message.MessageAndMetadata;
 import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.river.kafka.config.RiverConfig;
+import org.elasticsearch.river.kafka.produce.ElasticSearchProducer;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
@@ -31,11 +34,11 @@ import java.util.Set;
 
 /**
  * The worker thread, which does the actual job of consuming messages from kafka and passing those to
- * Elastic Search producer - {@link ElasticSearchProducer} to index.
+ * Elastic Search producer - {@link org.elasticsearch.river.kafka.produce.ElasticSearchProducer} to index.
  * Behind the scenes of kafka high level API, the worker will read the messages from different kafka brokers and
  * partitions.
  */
-public class KafkaWorker implements Runnable {
+public class KafkaRiverWorker implements Runnable {
 
     private KafkaConsumer kafkaConsumer;
     private ElasticSearchProducer elasticsearchProducer;
@@ -43,7 +46,7 @@ public class KafkaWorker implements Runnable {
 
     private volatile boolean consume = false;
 
-    private static final ESLogger logger = ESLoggerFactory.getLogger(KafkaWorker.class.getName());
+    private static final ESLogger logger = ESLoggerFactory.getLogger(KafkaRiverWorker.class.getName());
 
     /**
      * For randomly selecting the partition of a kafka partition.
@@ -51,9 +54,9 @@ public class KafkaWorker implements Runnable {
     private Random random = new Random();
 
 
-    public KafkaWorker(final KafkaConsumer kafkaConsumer,
-                       final ElasticSearchProducer elasticsearchProducer,
-                       final RiverConfig riverConfig) {
+    public KafkaRiverWorker(final KafkaConsumer kafkaConsumer,
+                            final ElasticSearchProducer elasticsearchProducer,
+                            final RiverConfig riverConfig) {
         this.kafkaConsumer = kafkaConsumer;
         this.elasticsearchProducer = elasticsearchProducer;
         this.riverConfig = riverConfig;
@@ -62,23 +65,23 @@ public class KafkaWorker implements Runnable {
     @Override
     public void run() {
 
-        logger.debug("Index: {}: Kafka worker started...", riverConfig.getIndexName());
+        logger.debug("Index: {}: Kafka worker started...", riverConfig.esConfig.getIndexName());
 
         if (consume) {
-            logger.debug("Index: {}: Consumer is already running, new one will not be started...", riverConfig.getIndexName());
+            logger.debug("Index: {}: Consumer is already running, new one will not be started...", riverConfig.esConfig.getIndexName());
             return;
         }
 
         consume = true;
         try {
-            logger.debug("Index: {}: Kafka consumer started...", riverConfig.getIndexName());
+            logger.debug("Index: {}: Kafka consumer started...", riverConfig.esConfig.getIndexName());
 
             while (consume) {
                 KafkaStream stream = chooseRandomStream(kafkaConsumer.getStreams());
                 consumeMessagesAndAddToBulkProcessor(stream);
             }
         } finally {
-            logger.debug("Index: {}: Kafka consumer has stopped...", riverConfig.getIndexName());
+            logger.debug("Index: {}: Kafka consumer has stopped...", riverConfig.esConfig.getIndexName());
             consume = false;
         }
     }
@@ -103,7 +106,7 @@ public class KafkaWorker implements Runnable {
                 messageSet.add(messageAndMetadata);
                 counter++;
 
-                if(counter >= riverConfig.getBulkSize()) {
+                if(counter >= riverConfig.esConfig.getBulkSize()) {
                     elasticsearchProducer.addMessagesToBulkProcessor(messageSet);
                     messageSet = Sets.newHashSet();
                     counter = 0;
@@ -138,7 +141,7 @@ public class KafkaWorker implements Runnable {
         try {
             final String message = new String(messageBytes, "UTF-8");
 
-            logger.debug("Index: {}: Message received: {}", riverConfig.getIndexName(), message);
+            logger.debug("Index: {}: Message received: {}", riverConfig.esConfig.getIndexName(), message);
         } catch (UnsupportedEncodingException e) {
             logger.debug("The UTF-8 charset is not supported for the kafka message.");
         }

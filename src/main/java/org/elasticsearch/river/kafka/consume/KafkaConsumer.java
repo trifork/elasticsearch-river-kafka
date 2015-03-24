@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.elasticsearch.river.kafka;
+package org.elasticsearch.river.kafka.consume;
 
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.ESLoggerFactory;
+import org.elasticsearch.river.kafka.config.RiverConfig;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +32,7 @@ import java.util.Properties;
  *
  * @author Mariam Hakobyan
  */
-public class KafkaConsumer {
+public class KafkaConsumer implements Consumer {
 
     private final static Integer AMOUNT_OF_THREADS_PER_CONSUMER = 1;
     private final static String GROUP_ID = "elasticsearch-kafka-river";
@@ -47,21 +48,21 @@ public class KafkaConsumer {
         consumerConnector = kafka.consumer.Consumer.createJavaConsumerConnector(createConsumerConfig(riverConfig));
 
         final Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
-        topicCountMap.put(riverConfig.getTopic(), AMOUNT_OF_THREADS_PER_CONSUMER);
+        topicCountMap.put(riverConfig.kafkaConfig.getTopic(), AMOUNT_OF_THREADS_PER_CONSUMER);
 
         final Map<String, List<KafkaStream<byte[], byte[]>>> consumerStreams =
                 consumerConnector.createMessageStreams(topicCountMap);
 
-        streams = consumerStreams.get(riverConfig.getTopic());
+        streams = consumerStreams.get(riverConfig.kafkaConfig.getTopic());
 
         logger.debug("Index: {}: Started kafka consumer for topic: {} with {} partitions in it.",
-                riverConfig.getIndexName(), riverConfig.getTopic(), streams.size());
+                riverConfig.esConfig.getIndexName(), riverConfig.kafkaConfig.getTopic(), streams.size());
     }
 
     private ConsumerConfig createConsumerConfig(final RiverConfig riverConfig) {
         final Properties props = new Properties();
-        props.put("zookeeper.connect", riverConfig.getZookeeperConnect());
-        props.put("zookeeper.connection.timeout.ms", String.valueOf(riverConfig.getZookeeperConnectionTimeout()));
+        props.put("zookeeper.connect", riverConfig.kafkaConfig.getZookeeperConnect());
+        props.put("zookeeper.connection.timeout.ms", String.valueOf(riverConfig.kafkaConfig.getZookeeperConnectionTimeout()));
         props.put("group.id", GROUP_ID);
         props.put("auto.commit.enable", String.valueOf(false));
         props.put("consumer.timeout.ms", String.valueOf(CONSUMER_TIMEOUT));
@@ -75,11 +76,17 @@ public class KafkaConsumer {
         }
     }
 
-    List<KafkaStream<byte[], byte[]>> getStreams() {
+    public List<KafkaStream<byte[], byte[]>> getStreams() {
         return streams;
     }
 
     ConsumerConnector getConsumerConnector() {
         return consumerConnector;
     }
+
+    @Override
+    public void commitReads() {
+        getConsumerConnector().commitOffsets();
+    }
+
 }

@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.elasticsearch.river.kafka;
+package org.elasticsearch.river.kafka.produce;
 
 import kafka.message.MessageAndMetadata;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
+import org.elasticsearch.river.kafka.config.ESConfig;
 
 import java.util.Map;
 import java.util.Set;
@@ -32,8 +34,8 @@ import java.util.UUID;
  */
 public class IndexDocumentProducer extends ElasticSearchProducer {
 
-    public IndexDocumentProducer(Client client, RiverConfig riverConfig, KafkaConsumer kafkaConsumer) {
-        super(client, riverConfig, kafkaConsumer);
+    public IndexDocumentProducer(Client client, ESConfig config, KafkaConsumer kafkaConsumer) {
+        super(client, config, kafkaConsumer);
     }
 
     /**
@@ -55,22 +57,22 @@ public class IndexDocumentProducer extends ElasticSearchProducer {
                 String message = null;
                 IndexRequest request = null;
 
-                switch (riverConfig.getMessageType()) {
+                switch (config.getMessageType()) {
                     case STRING:
                         message = XContentFactory.jsonBuilder()
                                 .startObject()
                                 .field("value", new String(messageBytes, "UTF-8"))
                                 .endObject()
                                 .string();
-                        request = Requests.indexRequest(riverConfig.getIndexName()).
-                                type(riverConfig.getTypeName()).
+                        request = Requests.indexRequest(config.generateIndexName()).
+                                type(config.getTypeName()).
                                 id(UUID.randomUUID().toString()).
                                 source(message);
                         break;
                     case JSON:
                         final Map<String, Object> messageMap = reader.readValue(messageBytes);
-                        request = Requests.indexRequest(riverConfig.getIndexName()).
-                                type(riverConfig.getTypeName()).
+                        request = Requests.indexRequest(config.generateIndexName()).
+                                type(config.getTypeName()).
                                 id(UUID.randomUUID().toString()).
                                 source(messageMap);
                 }

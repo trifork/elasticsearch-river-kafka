@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.elasticsearch.river.kafka;
+package org.elasticsearch.river.kafka.config;
 
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
 import org.elasticsearch.river.RiverName;
@@ -28,73 +28,36 @@ import java.util.Map;
  */
 public class RiverConfig {
 
-    /* Kakfa config */
-    private static final String ZOOKEEPER_CONNECT = "zookeeper.connect";
-    private static final String ZOOKEEPER_CONNECTION_TIMEOUT = "zookeeper.connection.timeout.ms";
-    private static final String TOPIC = "topic";
-    private static final String MESSAGE_TYPE = "message.type";
-
-    /* Elasticsearch config */
-    private static final String INDEX_NAME = "index";
-    private static final String MAPPING_TYPE = "type";
-    private static final String BULK_SIZE = "bulk.size";
-    private static final String CONCURRENT_REQUESTS = "concurrent.requests";
     private static final String ACTION_TYPE = "action.type";
-    private static final String FLUSH_INTERVAL_SECS = "flush.interval.secs";
 
 
-    private String zookeeperConnect;
-    private int zookeeperConnectionTimeout;
-    private String topic;
-    private MessageType messageType;
-    private String indexName;
-    private String typeName;
-    private int bulkSize;
-    private int concurrentRequests;
+    /* Kakfa config */
+    public KafkaConfig kafkaConfig;
+
+    /* ES config */
+    public ESConfig esConfig;
+
     private ActionType actionType;
-    private long flushIntervalSecs;
-
 
     public RiverConfig(RiverName riverName, RiverSettings riverSettings) {
 
         // Extract kafka related configuration
         if (riverSettings.settings().containsKey("kafka")) {
-            Map<String, Object> kafkaSettings = (Map<String, Object>) riverSettings.settings().get("kafka");
-
-            topic = (String) kafkaSettings.get(TOPIC);
-            zookeeperConnect = XContentMapValues.nodeStringValue(kafkaSettings.get(ZOOKEEPER_CONNECT), "localhost");
-            zookeeperConnectionTimeout = XContentMapValues.nodeIntegerValue(kafkaSettings.get(ZOOKEEPER_CONNECTION_TIMEOUT), 10000);
-            messageType = MessageType.fromValue(XContentMapValues.nodeStringValue(kafkaSettings.get(MESSAGE_TYPE),
-                    MessageType.JSON.toValue()));
+            kafkaConfig = new KafkaConfig((Map<String, Object>) riverSettings.settings().get("kafka"));
         } else {
-            zookeeperConnect = "localhost";
-            zookeeperConnectionTimeout = 10000;
-            topic = "elasticsearch-river-kafka";
-            messageType = MessageType.JSON;
+            kafkaConfig = new KafkaConfig();
         }
 
         // Extract ElasticSearch related configuration
         if (riverSettings.settings().containsKey("index")) {
             Map<String, Object> indexSettings = (Map<String, Object>) riverSettings.settings().get("index");
-            indexName = XContentMapValues.nodeStringValue(indexSettings.get(INDEX_NAME), riverName.name());
-            typeName = XContentMapValues.nodeStringValue(indexSettings.get(MAPPING_TYPE), "status");
-            bulkSize = XContentMapValues.nodeIntegerValue(indexSettings.get(BULK_SIZE), 100);
-            concurrentRequests = XContentMapValues.nodeIntegerValue(indexSettings.get(CONCURRENT_REQUESTS), 1);
-            flushIntervalSecs = XContentMapValues.nodeIntegerValue(indexSettings.get(FLUSH_INTERVAL_SECS), 5);
+            esConfig = new ESConfig(indexSettings, riverName.getName(), kafkaConfig.getMessageType());
             actionType = ActionType.fromValue(XContentMapValues.nodeStringValue(indexSettings.get(ACTION_TYPE),
                     ActionType.INDEX.toValue()));
         } else {
-            indexName = riverName.name();
-            typeName = "status";
-            bulkSize = 100;
-            concurrentRequests = 1;
-            flushIntervalSecs = 5;
+            esConfig = new ESConfig(riverName.name(), "status", 1, 100, 5, kafkaConfig.getMessageType());
             actionType = ActionType.INDEX;
         }
-    }
-
-    public long getFlushIntervalSecs() {
-        return flushIntervalSecs;
     }
 
     public enum ActionType {
@@ -151,39 +114,8 @@ public class RiverConfig {
         }
     }
 
-    String getTopic() {
-        return topic;
-    }
-
-    String getZookeeperConnect() {
-        return zookeeperConnect;
-    }
-
-    int getZookeeperConnectionTimeout() {
-        return zookeeperConnectionTimeout;
-    }
-
-    MessageType getMessageType() {
-        return messageType;
-    }
-
-    String getIndexName() {
-        return indexName;
-    }
-
-    String getTypeName() {
-        return typeName;
-    }
-
-    int getBulkSize() {
-        return bulkSize;
-    }
-
-    int getConcurrentRequests() {
-        return concurrentRequests;
-    }
-
-    ActionType getActionType() {
+    public ActionType getActionType() {
         return actionType;
     }
+
 }

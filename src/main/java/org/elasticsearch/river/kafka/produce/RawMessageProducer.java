@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.elasticsearch.river.kafka;
+package org.elasticsearch.river.kafka.produce;
 
 import kafka.message.MessageAndMetadata;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.bytes.ChannelBufferBytesReference;
 import org.elasticsearch.common.netty.buffer.ByteBufferBackedChannelBuffer;
+import org.elasticsearch.river.kafka.config.ESConfig;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
 
 import java.nio.ByteBuffer;
 import java.util.Set;
@@ -30,8 +32,8 @@ import java.util.Set;
  */
 public class RawMessageProducer extends ElasticSearchProducer {
 
-    public RawMessageProducer(Client client, RiverConfig riverConfig, KafkaConsumer kafkaConsumer) {
-        super(client, riverConfig, kafkaConsumer);
+    public RawMessageProducer(Client client, ESConfig config, KafkaConsumer kafkaConsumer) {
+        super(client, config, kafkaConsumer);
     }
 
     /**
@@ -48,8 +50,8 @@ public class RawMessageProducer extends ElasticSearchProducer {
                 bulkProcessor.add(
                         new ChannelBufferBytesReference(new ByteBufferBackedChannelBuffer(byteBuffer)),
                         false,
-                        riverConfig.getIndexName(),
-                        riverConfig.getTypeName()
+                        config.generateIndexName(),
+                        config.getTypeName()
                 );
             } catch (Exception e) {
                 e.printStackTrace();

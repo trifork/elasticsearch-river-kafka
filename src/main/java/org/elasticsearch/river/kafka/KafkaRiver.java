@@ -22,9 +22,12 @@ import org.elasticsearch.river.AbstractRiverComponent;
 import org.elasticsearch.river.River;
 import org.elasticsearch.river.RiverName;
 import org.elasticsearch.river.RiverSettings;
-
-import static org.elasticsearch.river.kafka.RiverConfig.*;
-import static org.elasticsearch.river.kafka.RiverConfig.ActionType.*;
+import org.elasticsearch.river.kafka.config.RiverConfig;
+import org.elasticsearch.river.kafka.produce.DeleteDocumentProducer;
+import org.elasticsearch.river.kafka.produce.ElasticSearchProducer;
+import org.elasticsearch.river.kafka.produce.IndexDocumentProducer;
+import org.elasticsearch.river.kafka.consume.KafkaConsumer;
+import org.elasticsearch.river.kafka.produce.RawMessageProducer;
 
 /**
  * This is the actual river implementation, which starts a thread to read messages from kafka and put them into elasticsearch.
@@ -46,13 +49,13 @@ public class KafkaRiver extends AbstractRiverComponent implements River {
 
         switch (riverConfig.getActionType()) {
             case INDEX:
-                elasticsearchProducer = new IndexDocumentProducer(client, riverConfig, kafkaConsumer);
+                elasticsearchProducer = new IndexDocumentProducer(client, riverConfig.esConfig, kafkaConsumer);
                 break;
             case DELETE:
-                elasticsearchProducer = new DeleteDocumentProducer(client, riverConfig, kafkaConsumer);
+                elasticsearchProducer = new DeleteDocumentProducer(client, riverConfig.esConfig, kafkaConsumer);
                 break;
             case RAW_EXECUTE:
-                elasticsearchProducer = new RawMessageProducer(client, riverConfig, kafkaConsumer);
+                elasticsearchProducer = new RawMessageProducer(client, riverConfig.esConfig, kafkaConsumer);
                 break;
         }
     }
@@ -61,20 +64,20 @@ public class KafkaRiver extends AbstractRiverComponent implements River {
     public void start() {
 
         try {
-            logger.debug("Index: {}: Starting Kafka River...", riverConfig.getIndexName());
-            final KafkaWorker kafkaWorker = new KafkaWorker(kafkaConsumer, elasticsearchProducer, riverConfig);
+            logger.debug("Index: {}: Starting Kafka River...", riverConfig.esConfig.getIndexName());
+            final KafkaRiverWorker kafkaRiverWorker = new KafkaRiverWorker(kafkaConsumer, elasticsearchProducer, riverConfig);
 
-            thread = EsExecutors.daemonThreadFactory(settings.globalSettings(), "Kafka River Worker").newThread(kafkaWorker);
+            thread = EsExecutors.daemonThreadFactory(settings.globalSettings(), "Kafka River Worker").newThread(kafkaRiverWorker);
             thread.start();
         } catch (Exception ex) {
-            logger.error("Index: {}: Unexpected Error occurred", ex, riverConfig.getIndexName());
+            logger.error("Index: {}: Unexpected Error occurred", ex, riverConfig.esConfig.getIndexName());
             throw new RuntimeException(ex);
         }
     }
 
     @Override
     public void close() {
-        logger.debug("Index: {}: Closing kafka river...", riverConfig.getIndexName());
+        logger.debug("Index: {}: Closing kafka river...", riverConfig.esConfig.getIndexName());
 
         elasticsearchProducer.closeBulkProcessor();
         kafkaConsumer.shutdown();
